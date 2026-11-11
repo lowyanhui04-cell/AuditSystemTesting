@@ -1,0 +1,66 @@
+@page
+@model FindingsModel
+@{ ViewData["Title"] = "Findings"; }
+
+<div class="page-head">
+    <div>
+        <h1>Findings</h1>
+        <p>Results from the latest audit of every computer, most severe first.</p>
+    </div>
+</div>
+
+<div class="filters">
+    <div class="seg">
+        @foreach (var v in FindingsModel.Views)
+        {
+            <a class="@(Model.Show == v.Key ? "active" : "")" asp-route-show="@v.Key" asp-route-severity="@Model.Severity" asp-route-ruleId="@Model.RuleId">@v.Label (@Model.Counts.GetValueOrDefault(v.Key))</a>
+        }
+    </div>
+    <form method="get" class="filters" style="margin:0">
+        <input type="hidden" name="show" value="@Model.Show" />
+        <select name="severity" aria-label="Severity">
+            <option value="">Any severity</option>
+            @foreach (var s in new[] { Severity.High, Severity.Medium, Severity.Low })
+            {
+                <option value="@s" selected="@(Model.Severity == s)">@s severity</option>
+            }
+        </select>
+        <select name="ruleId" aria-label="Rule">
+            <option value="">Any check</option>
+            @foreach (var r in Model.Rules.OrderBy(r => r.Id))
+            {
+                <option value="@r.Id" selected="@(r.Id == Model.RuleId)">@r.Id – @r.Title</option>
+            }
+        </select>
+        <button class="btn" type="submit">Apply</button>
+        @if (Model.Severity is not null || !string.IsNullOrEmpty(Model.RuleId)) { <a class="small" asp-route-show="@Model.Show">Clear</a> }
+    </form>
+</div>
+
+<div class="card flush">
+    @if (Model.Rows.Count == 0)
+    {
+        <div class="empty muted">Nothing to show for these filters.</div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table>
+                <thead><tr><th>Result</th><th>Check</th><th>Computer</th><th>What was found</th><th>Audit</th></tr></thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        var f = r.Finding;
+                        <tr>
+                            <td><span class="@ViewHelpers.OutcomeClass(f.Outcome)">@ViewHelpers.OutcomeLabel(f.Outcome)</span></td>
+                            <td><strong>@f.Title</strong><span class="sub">@f.RuleId · <span class="@ViewHelpers.SeverityClass(f.Severity)">@f.Severity.ToString().ToUpperInvariant()</span></span></td>
+                            <td><a asp-page="/Endpoints/Details" asp-route-id="@r.EndpointId">@r.EndpointName</a></td>
+                            <td>@f.Observed</td>
+                            <td><a asp-page="/Audits/Details" asp-route-id="@r.AuditId" class="small">@ViewHelpers.Utc(r.CollectedAtUtc)</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</div>

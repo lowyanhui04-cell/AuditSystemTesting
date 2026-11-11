@@ -1,0 +1,19 @@
+@page
+@model EndpointLens.Server.Pages.Account.SetupModel
+@{ ViewData["Title"] = "First-time setup"; }
+
+<div class="card">
+    <div class="brand"><div class="brand-mark">EL</div><div><strong>EndpointLens</strong><span>First-time setup</span></div></div>
+    <h1 style="font-size:20px">Create the administrator account</h1>
+    <p class="muted small">This page is only available until the first account exists.</p>
+    <form method="post">
+        <div asp-validation-summary="All" class="error small"></div>
+        <label asp-for="UserName">User name</label>
+        <input asp-for="UserName" type="text" autocomplete="username" />
+        <label asp-for="Password">Password <span class="muted">(at least 12 characters)</span></label>
+        <input asp-for="Password" autocomplete="new-password" />
+        <label asp-for="ConfirmPassword">Confirm password</label>
+        <input asp-for="ConfirmPassword" autocomplete="new-password" />
+        <button type="submit" class="btn primary">Create account</button>
+    </form>
+</div>

@@ -1,0 +1,136 @@
+@page "{id:int}"
+@model EndpointLens.Server.Pages.Audits.ReportModel
+@{
+    Layout = null;
+    var a = Model.Data.Audit;
+    var s = Model.Data.Snapshot;
+    var sys = s?.System.Data;
+    var actionable = Model.Data.Findings.Where(f => f.Outcome is Outcome.Fail or Outcome.Warning).ToList();
+    var unknown = Model.Data.Findings.Where(f => f.Outcome == Outcome.Unknown).ToList();
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>EndpointLens audit report – @a.Endpoint?.Name – @a.CollectedAtUtc.ToString("yyyy-MM-dd")</title>
+    <style>
+        body { font: 13px/1.5 "Segoe UI", Arial, sans-serif; color: #1d2430; margin: 32px auto; max-width: 960px; padding: 0 16px; }
+        h1 { font-size: 22px; margin: 0; } h2 { font-size: 16px; border-bottom: 2px solid #1d2430; padding-bottom: 4px; margin-top: 28px; }
+        table { width: 100%; border-collapse: collapse; margin: 8px 0; } th, td { border: 1px solid #d0d5dd; padding: 6px 8px; text-align: left; vertical-align: top; }
+        th { background: #f2f4f7; font-size: 11px; text-transform: uppercase; }
+        .meta td:first-child { width: 220px; color: #475467; }
+        .badge { padding: 1px 7px; border-radius: 9px; font-weight: 600; font-size: 11px; white-space: nowrap; }
+        .s-high, .o-fail, .r-high { color: #b42318; background: #fef3f2; } .s-medium, .o-warning, .r-medium { color: #b54708; background: #fffaeb; }
+        .s-low, .r-low { color: #175cd3; background: #eff8ff; } .o-pass, .r-minimal { color: #067647; background: #ecfdf3; }
+        .o-unknown, .o-notapplicable, .r-incomplete { color: #475467; background: #f2f4f7; }
+        .summary { display: flex; gap: 28px; margin: 16px 0; } .summary .n { font-size: 24px; font-weight: 700; } .summary .l { color: #475467; font-size: 11px; }
+        .muted { color: #667085; } .small { font-size: 11px; }
+        .note { border-left: 3px solid #d0d5dd; padding: 6px 12px; background: #f9fafb; }
+        @@media print { body { margin: 0; } a { color: inherit; text-decoration: none; } }
+    </style>
+</head>
+<body>
+    <p class="muted small">EndpointLens · Automated IT Security Audit Report</p>
+    <h1>@a.Endpoint?.Name (@a.Hostname)</h1>
+    <p class="muted">Evidence collected @ViewHelpers.Utc(a.CollectedAtUtc) · report generated @ViewHelpers.Utc(Model.GeneratedAtUtc)</p>
+
+    <div class="summary">
+        <div><div class="n">@ViewHelpers.Score(a.Score)</div><div class="l">Configuration score / 100</div></div>
+        <div><div class="n">@a.Coverage.ToString("P0")</div><div class="l">Rule coverage</div></div>
+        <div><div class="n"><span class="@ViewHelpers.RiskClass(a.RiskLevel)">@a.RiskLevel</span></div><div class="l">Overall risk</div></div>
+        <div><div class="n">@a.FailCount</div><div class="l">Fail</div></div>
+        <div><div class="n">@a.WarningCount</div><div class="l">Warning</div></div>
+        <div><div class="n">@a.UnknownCount</div><div class="l">Unknown</div></div>
+    </div>
+
+    <h2>1. Audit identity</h2>
+    <table class="meta">
+        <tr><td>Enrolled endpoint</td><td>@a.Endpoint?.Name</td></tr>
+        <tr><td>Reported hostname</td><td>@a.Hostname</td></tr>
+        <tr><td>Operating system</td><td>@a.OsCaption @sys?.OsDisplayVersion (build @a.OsBuild)</td></tr>
+        <tr><td>Manufacturer / model / serial</td><td>@sys?.Manufacturer @sys?.Model / @(sys?.SerialNumber ?? "—")</td></tr>
+        <tr><td>Interactive user at collection</td><td>@(a.InteractiveUser ?? "None / unknown")</td></tr>
+        <tr><td>Snapshot ID</td><td>@a.SnapshotId</td></tr>
+        <tr><td>Agent version / elevated</td><td>@a.AgentVersion / @ViewHelpers.YesNo(a.AgentElevated)</td></tr>
+        <tr><td>Rule set version</td><td>@a.RuleSetVersion</td></tr>
+        <tr><td>Submission</td><td>@a.Source, received @ViewHelpers.Utc(a.ReceivedAtUtc)</td></tr>
+    </table>
+
+    <h2>2. Findings requiring action (@actionable.Count)</h2>
+    @if (actionable.Count == 0)
+    {
+        <p>No FAIL or WARNING findings for the evaluated rules.</p>
+    }
+    else
+    {
+        <table>
+            <tr><th>Severity</th><th>Outcome</th><th>Rule</th><th>Evidence</th><th>Recommendation</th></tr>
+            @foreach (var f in actionable)
+            {
+                <tr>
+                    <td><span class="badge @("s-" + f.Severity.ToString().ToLowerInvariant())">@f.Severity.ToString().ToUpperInvariant()</span></td>
+                    <td><span class="badge @("o-" + f.Outcome.ToString().ToLowerInvariant())">@ViewHelpers.OutcomeLabel(f.Outcome)</span></td>
+                    <td><strong>@f.RuleId</strong> @f.Title</td>
+                    <td>@f.Observed<div class="muted small">Expected: @f.Expected</div></td>
+                    <td>@f.Recommendation</td>
+                </tr>
+            }
+        </table>
+    }
+
+    <h2>3. Checks that could not be evaluated (@unknown.Count)</h2>
+    @if (unknown.Count == 0)
+    {
+        <p>All applicable rules had sufficient evidence.</p>
+    }
+    else
+    {
+        <p class="note">UNKNOWN means the evidence was missing or could not be collected. It is not a pass; verify these items manually or re-run the agent with administrator rights.</p>
+        <table>
+            <tr><th>Severity</th><th>Rule</th><th>Reason</th></tr>
+            @foreach (var f in unknown)
+            {
+                <tr><td><span class="badge @("s-" + f.Severity.ToString().ToLowerInvariant())">@f.Severity.ToString().ToUpperInvariant()</span></td><td><strong>@f.RuleId</strong> @f.Title</td><td>@f.Observed</td></tr>
+            }
+        </table>
+    }
+
+    <h2>4. All rule results</h2>
+    <table>
+        <tr><th>Rule</th><th>Severity</th><th>Outcome</th><th>Observed</th></tr>
+        @foreach (var f in Model.Data.Findings.OrderBy(f => f.RuleId))
+        {
+            <tr>
+                <td><strong>@f.RuleId</strong> v@(f.RuleVersion) @f.Title</td>
+                <td>@f.Severity.ToString().ToUpperInvariant()</td>
+                <td><span class="badge @("o-" + f.Outcome.ToString().ToLowerInvariant())">@ViewHelpers.OutcomeLabel(f.Outcome)</span></td>
+                <td>@f.Observed</td>
+            </tr>
+        }
+    </table>
+
+    @if (s is not null)
+    {
+        <h2>5. Evidence coverage</h2>
+        <table>
+            <tr><th>Evidence category</th><th>Status</th><th>Detail</th></tr>
+            <tr><td>Computer specifications</td><td>@s.System.Status</td><td>@s.System.Error</td></tr>
+            <tr><td>Installed applications</td><td>@s.Applications.Status</td><td>@(s.Applications.Data?.Count ?? 0) entries from uninstall registry keys. @s.Applications.Error</td></tr>
+            <tr><td>Current user</td><td>@s.CurrentUser.Status</td><td>@s.CurrentUser.Error</td></tr>
+            <tr><td>Local accounts</td><td>@s.LocalAccounts.Status</td><td>@(s.LocalAccounts.Data?.Accounts.Count ?? 0) accounts. @s.LocalAccounts.Error</td></tr>
+            <tr><td>Antivirus</td><td>@s.Antivirus.Status</td><td>@string.Join(", ", s.Antivirus.Data?.Products.Select(p => p.DisplayName) ?? Array.Empty<string>()) @s.Antivirus.Error</td></tr>
+            <tr><td>Firewall</td><td>@s.Firewall.Status</td><td>@s.Firewall.Error</td></tr>
+            <tr><td>Security configuration</td><td>@s.SecurityConfig.Status</td><td>@s.SecurityConfig.Error</td></tr>
+        </table>
+    }
+
+    <h2>Scope and limitations</h2>
+    <p class="note small">
+        This report reflects the endpoint's state at the collection time shown above and evaluates the EndpointLens project baseline (rule set @a.RuleSetVersion),
+        which is a focused set of checks motivated by CIS Controls and NIST guidance. It is not a CIS Benchmark or NIST compliance assessment, does not detect malware or
+        vulnerabilities, and does not replace professional judgement. The score is the weighted share of evaluated rules that passed (High = 10, Medium = 5, Low = 2;
+        warnings earn half credit); UNKNOWN results are excluded from the score and reduce coverage instead.
+    </p>
+</body>
+</html>

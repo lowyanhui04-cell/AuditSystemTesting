@@ -1,0 +1,56 @@
+@page
+@model EndpointLens.Server.Pages.Endpoints.EnrollModel
+@{ ViewData["Title"] = "Enroll endpoint"; }
+
+<div class="page-head">
+    <div>
+        <h1>Enroll endpoint</h1>
+        <p>Add a Windows computer you are allowed to audit. It gets its own credential for uploading audits.</p>
+    </div>
+</div>
+
+@if (Model.IssuedToken is not null)
+{
+    <div class="grid-2">
+        <div class="card">
+            <div class="ok-box small">“@Model.Name” was enrolled.</div>
+            <h2>Credential</h2>
+            <p class="muted small">Copy it now — it is shown only once. It lets this computer upload audits and gives no access to this dashboard.</p>
+            <code class="token">@Model.IssuedToken</code>
+            <p style="margin-top:16px"><a class="btn primary" asp-page="Details" asp-route-id="@Model.IssuedEndpointId">Go to @Model.Name</a></p>
+        </div>
+        <div class="card">
+            <h2>Next, on that computer</h2>
+            <ol class="steps">
+                <li><div>Open <strong>EndpointLens.Agent.exe</strong>.</div></li>
+                <li><div>Click <strong>Connect to dashboard</strong>. Enter <code>@($"{Request.Scheme}://{Request.Host}")</code> and paste the credential.</div></li>
+                <li><div>Click <strong>Test connection</strong>, then <strong>Save</strong>.</div></li>
+                <li><div>Click <strong>Start audit</strong>. Results upload automatically.</div></li>
+            </ol>
+        </div>
+    </div>
+}
+else
+{
+    <div class="grid-2">
+        <div class="card">
+            <form method="post">
+                <div asp-validation-summary="All" class="error small"></div>
+                <label asp-for="Name" style="margin-top:0">Computer name</label>
+                <input asp-for="Name" type="text" placeholder="e.g. FIN-LAPTOP-01" />
+                <div class="muted small" style="margin-top:4px">Tip: use the Windows computer name so audits are easy to match.</div>
+                <label asp-for="Notes">Notes <span class="muted">(optional)</span></label>
+                <textarea asp-for="Notes" rows="3" placeholder="Location, department, consent reference…"></textarea>
+                <p style="margin:18px 0 0"><button type="submit" class="btn primary">Enroll and create credential</button></p>
+            </form>
+        </div>
+        <div class="card">
+            <h2>How it works</h2>
+            <ol class="steps">
+                <li><div><strong>Enroll</strong> the computer here.</div></li>
+                <li><div><strong>Connect</strong> the agent on that computer with the credential.</div></li>
+                <li><div><strong>Audit</strong> — the agent reads settings (read-only) and uploads the result over HTTPS.</div></li>
+            </ol>
+        </div>
+    </div>
+}

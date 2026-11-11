@@ -1,0 +1,11 @@
+@page
+@using Microsoft.AspNetCore.Authentication
+@functions {
+    public IActionResult OnGet() => RedirectToPage("/Index");
+
+    public async Task<IActionResult> OnPostAsync()
+    {
+        await HttpContext.SignOutAsync();
+        return RedirectToPage("/Account/Login");
+    }
+}

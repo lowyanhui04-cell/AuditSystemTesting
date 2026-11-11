@@ -1,0 +1,123 @@
+@page "{id:int}"
+@model EndpointLens.Server.Pages.Endpoints.DetailsModel
+@{
+    ViewData["Title"] = Model.Endpoint.Name;
+    var latest = Model.Latest;
+    var tabs = new List<(string Key, string Label, int? Count)> { ("findings", "Findings", latest?.Findings.Count(f => f.Outcome is Outcome.Fail or Outcome.Warning or Outcome.Unknown)) };
+    tabs.AddRange(ViewHelpers.EvidenceTabs.Select(t => (t.Key, t.Label, (int?)null)));
+    tabs.Add(("history", "History", Model.History.Count));
+    tabs.Add(("settings", "Credential", null));
+    var tab = tabs.Any(t => t.Key == Model.Tab) ? Model.Tab : "findings";
+}
+
+<div class="page-head">
+    <div>
+        <div class="crumb"><a asp-page="/Index">Overview</a> › Computer</div>
+        <h1>@Model.Endpoint.Name @if (Model.Endpoint.Revoked) { <span class="badge o-unknown">credential revoked</span> }</h1>
+        <p>
+            @if (latest is not null) { <text>@latest.Audit.Hostname · @latest.Audit.OsCaption · last audit @ViewHelpers.Ago(latest.Audit.CollectedAtUtc, Model.Now)</text> }
+            else { <text>No audit yet</text> }
+        </p>
+    </div>
+    @if (latest is not null)
+    {
+        <div class="actions">
+            <a class="btn primary" asp-page="/Audits/Report" asp-route-id="@latest.Audit.Id">View report</a>
+            <a class="btn" asp-page="/Audits/Report" asp-route-id="@latest.Audit.Id" asp-route-download="true">Download</a>
+            <a class="btn" href="/audits/@latest.Audit.Id/export/csv">CSV</a>
+            <a class="btn" href="/audits/@latest.Audit.Id/export/json">JSON</a>
+        </div>
+    }
+</div>
+
+@if (Model.IssuedToken is not null)
+{
+    <div class="card" style="margin-bottom:16px">
+        <h2>New credential</h2>
+        <div class="warn-box small">Copy it now — it is shown only once. The old credential has stopped working.</div>
+        <code class="token">@Model.IssuedToken</code>
+    </div>
+}
+
+@if (latest is null)
+{
+    <div class="card empty">
+        <h2>Waiting for the first audit</h2>
+        <ol class="steps">
+            <li><div>On <strong>@Model.Endpoint.Name</strong>, open <strong>EndpointLens.Agent.exe</strong>.</div></li>
+            <li><div>Click <strong>Connect</strong> and paste this computer's credential.</div></li>
+            <li><div>Click <strong>Start audit</strong>. The results appear here.</div></li>
+        </ol>
+        <p class="muted small" style="margin-top:18px">Lost the credential? Open the <a asp-route-tab="settings">Credential</a> tab to create a new one. No internet on that PC? <a asp-page="/Import">Import an audit file</a>.</p>
+    </div>
+}
+else
+{
+    <partial name="_AuditHeader" model="latest.Audit" />
+}
+
+<nav class="tabs">
+    @foreach (var t in tabs)
+    {
+        if (latest is null && t.Key is not ("history" or "settings")) continue;
+        <a class="@(t.Key == tab ? "active" : "")" asp-route-tab="@t.Key">@t.Label@if (t.Count is > 0) { <span class="count">@t.Count</span> }</a>
+    }
+</nav>
+
+@if (tab == "findings" && latest is not null)
+{
+    <div class="card flush"><partial name="_FindingsList" model="latest.Findings" /></div>
+}
+else if (tab == "history")
+{
+    <div class="card flush">
+        @if (Model.History.Count == 0) { <div class="empty muted">No audits yet.</div> }
+        else
+        {
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Collected</th><th>Score</th><th>Risk</th><th>Fail / Warn / Unknown</th><th>Signed-in user</th><th>Admin</th><th>Source</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var a in Model.History)
+                        {
+                            <tr>
+                                <td><a asp-page="/Audits/Details" asp-route-id="@a.Id">@ViewHelpers.Utc(a.CollectedAtUtc)</a></td>
+                                <td><partial name="_Ring" model='new RingModel(a.Score, "sm")' /></td>
+                                <td><span class="@ViewHelpers.RiskClass(a.RiskLevel)">@ViewHelpers.RiskLabel(a.RiskLevel)</span></td>
+                                <td>@a.FailCount / @a.WarningCount / @a.UnknownCount</td>
+                                <td>@(a.InteractiveUser ?? "—")</td>
+                                <td>@ViewHelpers.YesNo(a.AgentElevated)</td>
+                                <td class="muted">@(a.Source == "import" ? "Imported file" : "Agent")</td>
+                                <td><a asp-page="/Audits/Report" asp-route-id="@a.Id">Report</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+}
+else if (tab == "settings")
+{
+    <div class="card form">
+        <h2>Endpoint credential</h2>
+        <p class="muted">The agent on this computer uses a credential to upload audits. It cannot open this dashboard.</p>
+        <dl class="kv" style="margin-bottom:18px">
+            <dt>Status</dt><dd>@(Model.Endpoint.Revoked ? "Revoked" : "Active")</dd>
+            <dt>Enrolled</dt><dd>@ViewHelpers.Utc(Model.Endpoint.CreatedAtUtc)</dd>
+            <dt>Last upload</dt><dd>@ViewHelpers.Utc(Model.Endpoint.LastSubmissionUtc)</dd>
+            @if (!string.IsNullOrEmpty(Model.Endpoint.Notes)) { <dt>Notes</dt><dd>@Model.Endpoint.Notes</dd> }
+        </dl>
+        <div class="actions">
+            <form class="inline-form" method="post" asp-page-handler="Rotate" asp-route-id="@Model.Endpoint.Id"><button class="btn" type="submit">Create new credential</button></form>
+            @if (!Model.Endpoint.Revoked)
+            {
+                <form class="inline-form" method="post" asp-page-handler="Revoke" asp-route-id="@Model.Endpoint.Id"><button class="btn danger" type="submit">Revoke credential</button></form>
+            }
+        </div>
+    </div>
+}
+else if (latest?.Snapshot is not null)
+{
+    <partial name="_EvidenceTab" model="new EvidenceTabModel(latest.Snapshot, tab)" />
+}

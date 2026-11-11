@@ -1,0 +1,101 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Overview";
+    var latest = Model.Latest;
+}
+
+<div class="page-head">
+    <div>
+        <h1>Overview</h1>
+        <p>Security status of every enrolled Windows computer, based on its most recent audit.</p>
+    </div>
+    <div class="actions"><a class="btn primary" asp-page="/Endpoints/Enroll">＋ Enroll endpoint</a></div>
+</div>
+
+@if (Model.Endpoints.Count == 0)
+{
+    <div class="card empty">
+        <h2>Get started</h2>
+        <p class="muted">No computers yet. Three steps to your first audit:</p>
+        <ol class="steps">
+            <li><div><strong>Enroll a computer</strong><div class="muted small">Give it a name and copy the credential.</div></div></li>
+            <li><div><strong>Run the agent on that computer</strong><div class="muted small">Open EndpointLens.Agent.exe, click Connect, paste the credential.</div></div></li>
+            <li><div><strong>Click Start audit</strong><div class="muted small">The results upload and appear here.</div></div></li>
+        </ol>
+        <p style="margin-top:24px"><a class="btn primary" asp-page="/Endpoints/Enroll">Enroll the first computer</a></p>
+    </div>
+}
+else
+{
+    <div class="kpis">
+        <div class="kpi"><div class="label">Computers</div><div class="value">@Model.Endpoints.Count</div><div class="hint">@latest.Count audited</div></div>
+        <div class="kpi"><div class="label">Average score</div><div class="value" style="color:@ViewHelpers.ScoreColor(Model.AverageScore)">@ViewHelpers.Score(Model.AverageScore)</div><div class="hint">out of 100</div></div>
+        <div class="kpi bad"><div class="label">High risk</div><div class="value">@latest.Count(a => a.RiskLevel == "High")</div><div class="hint">computers with a high-severity failure</div></div>
+        <div class="kpi warn"><div class="label">Failed checks</div><div class="value">@latest.Sum(a => a.FailCount)</div><div class="hint">across all computers</div></div>
+        <div class="kpi neutral"><div class="label">Unknown</div><div class="value">@latest.Sum(a => a.UnknownCount)</div><div class="hint">checks without enough data</div></div>
+    </div>
+
+    <div class="grid-main">
+        <div class="card flush">
+            <div class="card-head"><h2>Computers</h2><span class="muted small">Needing attention first</span></div>
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Computer</th><th>Score</th><th>Risk</th><th>Issues</th><th class="nowrap">Last audit</th></tr></thead>
+                    <tbody>
+                        @foreach (var e in Model.Endpoints)
+                        {
+                            var a = e.Latest;
+                            <tr>
+                                <td>
+                                    <a asp-page="/Endpoints/Details" asp-route-id="@e.Id"><strong>@e.Name</strong></a>
+                                    @if (e.Revoked) { <span class="badge o-unknown">revoked</span> }
+                                    <span class="sub">@(a is null ? "Waiting for first audit" : $"{a.Hostname} · {a.OsCaption}")</span>
+                                </td>
+                                @if (a is null)
+                                {
+                                    <td colspan="4" class="muted">Run the agent on this computer to see results.</td>
+                                }
+                                else
+                                {
+                                    var stale = (Model.Now - a.CollectedAtUtc).TotalDays > IndexModel.StaleAfterDays;
+                                    <td><partial name="_Ring" model='new RingModel(a.Score, "sm")' /></td>
+                                    <td><span class="@ViewHelpers.RiskClass(a.RiskLevel)">@ViewHelpers.RiskLabel(a.RiskLevel)</span></td>
+                                    <td>
+                                        @if (a.FailCount + a.WarningCount + a.UnknownCount == 0) { <span class="muted">None</span> }
+                                        @if (a.FailCount > 0) { <span class="badge o-fail">@a.FailCount fail</span> }
+                                        @if (a.WarningCount > 0) { <span class="badge o-warning">@a.WarningCount warning</span> }
+                                        @if (a.UnknownCount > 0) { <span class="badge o-unknown">@a.UnknownCount unknown</span> }
+                                    </td>
+                                    <td class="nowrap">
+                                        <a asp-page="/Audits/Details" asp-route-id="@a.Id" title="@ViewHelpers.Utc(a.CollectedAtUtc)">@ViewHelpers.Ago(a.CollectedAtUtc, Model.Now)</a>
+                                        @if (stale) { <span class="sub" style="color:var(--warn)">Older than @IndexModel.StaleAfterDays days</span> }
+                                    </td>
+                                }
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="card flush">
+            <div class="card-head"><h2>Most common failures</h2><a class="small" asp-page="/Findings">All findings</a></div>
+            @if (Model.CommonIssues.Count == 0)
+            {
+                <div class="empty muted">No failed checks in the latest audits.</div>
+            }
+            @foreach (var i in Model.CommonIssues)
+            {
+                <a class="issue" asp-page="/Findings" asp-route-ruleId="@i.RuleId" asp-route-show="fail" style="color:inherit;text-decoration:none">
+                    <div style="flex:1">
+                        <div><strong>@i.Title</strong></div>
+                        <div class="muted small">@i.RuleId · <span class="@ViewHelpers.SeverityClass(i.Severity)">@i.Severity.ToString().ToUpperInvariant()</span></div>
+                        <div class="bar"><i style="width:@((100.0 * i.Endpoints / Math.Max(1, latest.Count)).ToString("0"))%"></i></div>
+                    </div>
+                    <div class="n">@i.Endpoints</div>
+                </a>
+            }
+        </div>
+    </div>
+}

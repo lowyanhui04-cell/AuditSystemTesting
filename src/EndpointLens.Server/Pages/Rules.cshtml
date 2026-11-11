@@ -1,0 +1,38 @@
+@page
+@{
+    ViewData["Title"] = "Security rules";
+    var rules = RuleEngine.DefaultRules.OrderByDescending(r => r.Severity).ThenBy(r => r.Id).ToList();
+}
+
+<div class="page-head">
+    <div>
+        <h1>Security rules</h1>
+        <p>The @rules.Count checks in the EndpointLens project baseline (version @RuleEngine.RuleSetVersion). Motivated by CIS Controls and NIST guidance; not a CIS Benchmark or NIST compliance assessment.</p>
+    </div>
+</div>
+
+<div class="kpis">
+    <div class="kpi"><div class="label">Results</div><div class="hint" style="margin-top:6px"><span class="badge o-pass">PASS</span> <span class="badge o-fail">FAIL</span> <span class="badge o-warning">WARNING</span> <span class="badge o-unknown">UNKNOWN</span> <span class="badge o-notapplicable">N/A</span></div></div>
+    <div class="kpi"><div class="label">Unknown is never a pass</div><div class="hint">Missing evidence lowers coverage instead of raising the score.</div></div>
+    <div class="kpi"><div class="label">Score weights</div><div class="hint">High @Scoring.Weight(Severity.High) · Medium @Scoring.Weight(Severity.Medium) · Low @Scoring.Weight(Severity.Low) · warnings earn half</div></div>
+</div>
+
+<div class="card flush">
+    @foreach (var r in rules)
+    {
+        <details class="finding">
+            <summary>
+                <span class="@ViewHelpers.SeverityClass(r.Severity)">@r.Severity.ToString().ToUpperInvariant()</span>
+                <span><span class="t">@r.Title</span><span class="m">@r.Id v@(r.Version) · @r.Category</span></span>
+                <span class="chev">›</span>
+            </summary>
+            <div class="finding-body">
+                <div class="row"><span>Expected</span><span>@r.Expected</span></div>
+                <div class="row"><span>Why</span><span>@r.Rationale</span></div>
+                <div class="row"><span>Applies to</span><span>@r.Applicability</span></div>
+                <div class="row"><span>Evidence</span><span><code>@r.EvidenceRef</code></span></div>
+                <div class="todo"><b>If it fails:</b> @r.Recommendation</div>
+            </div>
+        </details>
+    }
+</div>

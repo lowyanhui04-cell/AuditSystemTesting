@@ -1,0 +1,18 @@
+@page
+@model EndpointLens.Server.Pages.Account.LoginModel
+@{ ViewData["Title"] = "Sign in"; }
+
+<div class="card">
+    <div class="brand"><div class="brand-mark">EL</div><div><strong>EndpointLens</strong><span>Security audit dashboard</span></div></div>
+    <h1 style="font-size:20px">Sign in</h1>
+    @if (TempData["Message"] is string message) { <div class="ok-box small" style="margin-top:12px">@message</div> }
+    @if (Model.Error is not null) { <p class="error">@Model.Error</p> }
+    <form method="post">
+        <div asp-validation-summary="ModelOnly"></div>
+        <label asp-for="UserName">User name</label>
+        <input asp-for="UserName" type="text" autocomplete="username" autofocus />
+        <label asp-for="Password">Password</label>
+        <input asp-for="Password" autocomplete="current-password" />
+        <button type="submit" class="btn primary">Sign in</button>
+    </form>
+</div>

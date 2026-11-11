@@ -1,0 +1,30 @@
+@page
+@model ImportModel
+@{ ViewData["Title"] = "Import audit file"; }
+
+<div class="page-head">
+    <div>
+        <h1>Import audit file</h1>
+        <p>For computers that could not reach the dashboard. Importing the same file twice never creates a duplicate.</p>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        @foreach (var e in Model.Errors) { <div class="warn-box small">@e</div> }
+        <form method="post" enctype="multipart/form-data">
+            <label asp-for="EndpointId" style="margin-top:0">Computer</label>
+            <select asp-for="EndpointId" asp-items="Model.Endpoints"><option value="0">Select a computer…</option></select>
+            <label asp-for="Upload">Audit file (.json)</label>
+            <input asp-for="Upload" type="file" accept=".json,application/json" />
+            <p style="margin:18px 0 0"><button type="submit" class="btn primary">Import and check</button></p>
+        </form>
+    </div>
+    <div class="card">
+        <h2>Where to find the file</h2>
+        <ol class="steps">
+            <li><div>In the agent's results, click <strong>Save a copy</strong>, or</div></li>
+            <li><div>Look in <code>%LOCALAPPDATA%\EndpointLens\outbox</code> on that computer — every audit not yet uploaded is kept there.</div></li>
+        </ol>
+    </div>
+</div>

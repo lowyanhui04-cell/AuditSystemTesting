@@ -1,0 +1,26 @@
+@model Audit
+@* Score summary shown at the top of an endpoint or audit page. *@
+<div class="card" style="margin-bottom:16px">
+    <div class="score-block" style="flex-wrap:wrap">
+        <partial name="_Ring" model='new RingModel(Model.Score, "lg")' />
+        <div style="flex:1;min-width:220px">
+            <div class="muted small">Security score</div>
+            <div style="margin:4px 0 8px"><span class="@ViewHelpers.RiskClass(Model.RiskLevel)" style="font-size:13px">@ViewHelpers.RiskLabel(Model.RiskLevel)</span></div>
+            <div class="muted small">@((Model.Coverage).ToString("P0")) coverage · rule set @Model.RuleSetVersion · collected @ViewHelpers.Utc(Model.CollectedAtUtc)</div>
+        </div>
+        <div class="stat4">
+            <div><div class="label">Fail</div><div class="value bad">@Model.FailCount</div></div>
+            <div><div class="label">Warning</div><div class="value warn">@Model.WarningCount</div></div>
+            <div><div class="label">Unknown</div><div class="value neutral">@Model.UnknownCount</div></div>
+            <div><div class="label">Pass</div><div class="value good">@Model.Findings.Count(f => f.Outcome == Outcome.Pass)</div></div>
+        </div>
+    </div>
+</div>
+@if (!Model.AgentElevated)
+{
+    <div class="warn-box small">The agent did not run as administrator, so a few checks (such as BitLocker) are Unknown. Run it again as administrator for full results.</div>
+}
+@if (Model.Endpoint is not null && Model.Hostname is not null && !string.Equals(Model.Hostname, Model.Endpoint.Name, StringComparison.OrdinalIgnoreCase))
+{
+    <div class="warn-box small">This audit came from “@Model.Hostname”, but the computer is enrolled as “@Model.Endpoint.Name”. Make sure the credential is used on the right PC.</div>
+}

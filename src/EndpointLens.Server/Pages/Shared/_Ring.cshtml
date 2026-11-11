@@ -1,0 +1,2 @@
+@model RingModel
+<div class="ring @Model.Size" style="@ViewHelpers.RingStyle(Model.Score)" title="Security score @ViewHelpers.Score(Model.Score) / 100"><b>@ViewHelpers.Score(Model.Score)</b></div>

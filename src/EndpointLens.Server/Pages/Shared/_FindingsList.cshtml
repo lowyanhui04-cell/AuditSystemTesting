@@ -1,0 +1,34 @@
+@model IEnumerable<Finding>
+@{ var list = Model.ToList(); }
+@if (list.Count == 0)
+{
+    <div class="empty muted">No checks match this view.</div>
+}
+else
+{
+    <div class="findings">
+        @foreach (var f in list)
+        {
+            var attention = f.Outcome is Outcome.Fail or Outcome.Warning or Outcome.Unknown;
+            <details class="finding">
+                <summary>
+                    <span class="@ViewHelpers.OutcomeClass(f.Outcome)">@ViewHelpers.OutcomeLabel(f.Outcome)</span>
+                    <span>
+                        <span class="t">@f.Title</span>
+                        <span class="m">@f.RuleId · @f.Severity severity · @f.Category</span>
+                        <span class="o">@f.Observed</span>
+                    </span>
+                    <span class="chev">›</span>
+                </summary>
+                <div class="finding-body">
+                    <div class="row"><span>Expected</span><span>@f.Expected</span></div>
+                    <div class="row"><span>Evidence</span><span><code>@f.EvidenceRef</code> · rule v@(f.RuleVersion)</span></div>
+                    @if (attention)
+                    {
+                        <div class="todo"><b>What to do:</b> @(f.Outcome == Outcome.Unknown ? "Check this setting manually, or run the agent again as administrator." : f.Recommendation)</div>
+                    }
+                </div>
+            </details>
+        }
+    </div>
+}

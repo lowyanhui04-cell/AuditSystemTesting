@@ -1,0 +1,191 @@
+@model EvidenceTabModel
+@{
+    var s = Model.Snapshot;
+}
+
+@functions {
+    private static Microsoft.AspNetCore.Html.IHtmlContent Note<T>(EvidenceSection<T> sec) where T : class =>
+        sec.Status == EvidenceStatus.Collected
+            ? Microsoft.AspNetCore.Html.HtmlString.Empty
+            : new Microsoft.AspNetCore.Html.HtmlString(
+                $"<div class=\"warn-box small\">{System.Net.WebUtility.HtmlEncode(sec.Status.ToString())}: {System.Net.WebUtility.HtmlEncode(sec.Error ?? "no details")}</div>");
+}
+
+@switch (Model.Tab)
+{
+    case "hardware":
+        var sys = s.System.Data;
+        <div class="grid-2">
+            <div class="card">
+                <h2>Computer</h2>
+                @Note(s.System)
+                @if (sys is not null)
+                {
+                    <dl class="kv">
+                        <dt>Hostname</dt><dd>@sys.Hostname</dd>
+                        <dt>Manufacturer</dt><dd>@(sys.Manufacturer ?? "—")</dd>
+                        <dt>Model</dt><dd>@(sys.Model ?? "—")</dd>
+                        <dt>Serial number</dt><dd>@(sys.SerialNumber ?? "—")</dd>
+                        <dt>Type</dt><dd>@(sys.ChassisType ?? "—")</dd>
+                        <dt>Processor</dt><dd>@sys.CpuName<span class="muted small"> · @sys.CpuCores cores / @sys.CpuLogicalProcessors threads</span></dd>
+                        <dt>Memory</dt><dd>@ViewHelpers.Bytes(sys.TotalMemoryBytes)</dd>
+                        <dt>Domain / workgroup</dt><dd>@sys.Domain <span class="muted small">(domain joined: @ViewHelpers.YesNo(sys.PartOfDomain))</span></dd>
+                    </dl>
+                }
+            </div>
+            <div class="card">
+                <h2>Windows</h2>
+                @if (sys is not null)
+                {
+                    <dl class="kv">
+                        <dt>Edition</dt><dd>@sys.OsCaption</dd>
+                        <dt>Version</dt><dd>@(sys.OsDisplayVersion ?? "—") <span class="muted small">build @sys.OsBuild · @sys.OsArchitecture</span></dd>
+                        <dt>Installed</dt><dd>@ViewHelpers.Utc(sys.OsInstallDateUtc)</dd>
+                        <dt>Last restart</dt><dd>@ViewHelpers.Utc(sys.LastBootUtc)</dd>
+                        <dt>Last update installed</dt><dd>@ViewHelpers.Utc(sys.LastHotfixInstalledUtc)</dd>
+                        <dt>Secure Boot</dt><dd>@ViewHelpers.OnOff(sys.SecureBootEnabled)</dd>
+                    </dl>
+                    <h3 style="margin-top:18px">Disks</h3>
+                    @foreach (var d in sys.Disks)
+                    {
+                        var used = d.SizeBytes is > 0 && d.FreeBytes is not null ? 100.0 * (d.SizeBytes.Value - d.FreeBytes.Value) / d.SizeBytes.Value : 0;
+                        <div style="margin-bottom:10px">
+                            <div class="small"><strong>@d.DeviceId</strong> @d.FileSystem · @ViewHelpers.Bytes(d.FreeBytes) free of @ViewHelpers.Bytes(d.SizeBytes)</div>
+                            <div class="bar"><i style="width:@(used.ToString("0"))%;background:var(--primary)"></i></div>
+                        </div>
+                    }
+                }
+            </div>
+        </div>
+        break;
+
+    case "software":
+        var apps = s.Applications.Data ?? new List<InstalledApplication>();
+        <div class="card flush">
+            <div class="card-head">
+                <h2>Installed software <span class="muted">(@apps.Count)</span></h2>
+                <span class="muted small">From Apps &amp; features (uninstall registry). Portable programs are not listed.</span>
+            </div>
+            @Note(s.Applications)
+            <div class="table-wrap">
+                <table>
+                    <thead><tr><th>Name</th><th>Version</th><th>Publisher</th><th>Installed</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in apps)
+                        {
+                            <tr><td><strong>@a.Name</strong></td><td>@a.Version</td><td>@a.Publisher</td><td class="muted">@a.InstallDate</td></tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        break;
+
+    case "accounts":
+        var cu = s.CurrentUser.Data;
+        var la = s.LocalAccounts.Data;
+        <div class="grid-2">
+            <div class="card">
+                <h2>Signed-in user</h2>
+                @Note(s.CurrentUser)
+                @if (cu is not null)
+                {
+                    <dl class="kv">
+                        <dt>Using the PC</dt><dd>@(cu.InteractiveUser ?? "No one signed in")</dd>
+                        <dt>Agent ran as</dt><dd>@cu.ProcessAccount <span class="muted small">(administrator: @ViewHelpers.YesNo(cu.ProcessIsElevated))</span></dd>
+                    </dl>
+                    <p class="muted small" style="margin:12px 0 0">A snapshot at collection time. It does not prove who owns the device.</p>
+                }
+            </div>
+            <div class="card">
+                <h2>Password policy</h2>
+                @if (la?.PasswordPolicy is { } pp)
+                {
+                    <dl class="kv">
+                        <dt>Minimum length</dt><dd>@(pp.MinimumLength?.ToString() ?? "Unknown") characters</dd>
+                        <dt>Maximum age</dt><dd>@(pp.MaximumAgeDays is int age ? age + " days" : "Never expires")</dd>
+                        <dt>History</dt><dd>@(pp.HistoryLength?.ToString() ?? "Unknown") passwords remembered</dd>
+                        <dt>Lockout after</dt><dd>@(pp.LockoutThreshold is 0 ? "Never" : pp.LockoutThreshold + " failed attempts")</dd>
+                    </dl>
+                }
+                else { <p class="muted">Not available.</p> }
+            </div>
+        </div>
+        <div class="card flush" style="margin-top:16px">
+            <div class="card-head"><h2>Local accounts</h2><span class="muted small">Administrators: @(la?.Administrators is null ? "unknown" : string.Join(", ", la.Administrators.Select(m => m.Name)))</span></div>
+            @Note(s.LocalAccounts)
+            @if (la is not null)
+            {
+                var adminSids = la.Administrators?.Select(m => m.Sid).ToHashSet() ?? new HashSet<string?>();
+                <table>
+                    <thead><tr><th>Account</th><th>Status</th><th>Administrator</th><th>Password required</th></tr></thead>
+                    <tbody>
+                        @foreach (var a in la.Accounts)
+                        {
+                            <tr>
+                                <td><strong>@a.Name</strong>@if (a.IsBuiltInGuest) { <span class="sub">Built-in Guest</span> } else if (a.IsBuiltInAdministrator) { <span class="sub">Built-in Administrator</span> }</td>
+                                <td>@(a.Enabled == true ? "Enabled" : a.Enabled == false ? "Disabled" : "Unknown")</td>
+                                <td>@(adminSids.Contains(a.Sid) ? "Yes" : "No")</td>
+                                <td>@ViewHelpers.YesNo(a.PasswordRequired)</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+        </div>
+        break;
+
+    case "security":
+        var av = s.Antivirus.Data;
+        var fw = s.Firewall.Data;
+        var sc = s.SecurityConfig.Data;
+        <div class="grid-2">
+            <div class="card">
+                <h2>Antivirus</h2>
+                @Note(s.Antivirus)
+                @if (av is not null)
+                {
+                    <dl class="kv">
+                        @foreach (var p in av.Products)
+                        {
+                            <dt>@p.DisplayName</dt><dd>@(p.Enabled == true ? "Active" : p.Enabled == false ? "Not active" : "Unknown") · signatures @(p.SignaturesUpToDate == true ? "up to date" : p.SignaturesUpToDate == false ? "out of date" : "unknown")</dd>
+                        }
+                        @if (av.Products.Count == 0) { <dt>Registered</dt><dd>None</dd> }
+                        @if (av.Defender is { } d)
+                        {
+                            <dt>Defender real-time</dt><dd>@ViewHelpers.OnOff(d.RealTimeProtectionEnabled) <span class="muted small">(@d.RunningMode)</span></dd>
+                            <dt>Defender signatures</dt><dd>@(d.SignatureAgeDays?.ToString() ?? "?") day(s) old</dd>
+                        }
+                    </dl>
+                }
+            </div>
+            <div class="card">
+                <h2>Firewall</h2>
+                @Note(s.Firewall)
+                @if (fw is not null)
+                {
+                    <dl class="kv">
+                        <dt>Firewall service</dt><dd>@(fw.ServiceRunning == true ? "Running" : fw.ServiceRunning == false ? "Stopped" : "Unknown")</dd>
+                        @foreach (var p in fw.Profiles)
+                        {
+                            <dt>@p.Name network</dt><dd>@ViewHelpers.OnOff(p.Enabled) <span class="muted small">@(p.Source == "Policy" ? "(set by Group Policy)" : "")</span></dd>
+                        }
+                    </dl>
+                }
+            </div>
+        </div>
+        <div class="card" style="margin-top:16px">
+            <h2>Windows security settings</h2>
+            @Note(s.SecurityConfig)
+            @if (sc is not null)
+            {
+                <dl class="kv">
+                    <dt>User Account Control</dt><dd>@ViewHelpers.OnOff(sc.UacEnabled)</dd>
+                    <dt>SMBv1 file sharing</dt><dd>@(sc.Smb1ServerEnabled == true ? "Enabled" : sc.Smb1ServerEnabled == false ? "Disabled" : "Unknown")</dd>
+                    <dt>Remote Desktop</dt><dd>@(sc.RdpEnabled == true ? "Enabled" : sc.RdpEnabled == false ? "Disabled" : "Unknown") <span class="muted small">(Network Level Authentication: @ViewHelpers.OnOff(sc.RdpNlaRequired))</span></dd>
+                    <dt>BitLocker (@sc.SystemDrive)</dt><dd>@(sc.SystemDriveBitLocker ?? "Unknown")</dd>
+                </dl>
+            }
+        </div>
+        break;
+}
