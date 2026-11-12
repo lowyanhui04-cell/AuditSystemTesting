@@ -10,7 +10,7 @@ namespace EndpointLens.Agent;
 /// </summary>
 internal sealed class AgentSettings
 {
-    public string ServerUrl { get; set; } = "https://localhost:5443";
+    public string ServerUrl { get; set; } = "https://auditsystemtesting.onrender.com/";
     public string? ProtectedToken { get; set; }
 
     public static string DataDirectory { get; } =
