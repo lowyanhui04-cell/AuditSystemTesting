@@ -1,0 +1,65 @@
+@inject EndpointLens.Server.Services.OperatorEnrollment OperatorMode
+@inject EndpointLens.Server.Services.LocalDashboard DashboardMode
+@{
+    var path = Context.Request.Path.Value ?? "/";
+    string Active(string prefix) => prefix == "/" ? (path == "/" || path.StartsWith("/Endpoints/Details") || path.StartsWith("/Audits") ? "active" : "")
+                                                  : path.StartsWith(prefix, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+    var signedIn = User.Identity?.IsAuthenticated == true;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] · EndpointLens</title>
+    <link rel="stylesheet" href="~/css/site.css" />
+</head>
+<body>
+@if (!signedIn)
+{
+    <div class="auth">@RenderBody()</div>
+}
+else
+{
+    <div class="shell">
+        <aside class="side">
+            <div class="brand">
+                <div class="brand-mark">EL</div>
+                <div><strong>EndpointLens</strong><span>@(DashboardMode.Enabled ? "Local dashboard" : "Super Admin dashboard")</span></div>
+            </div>
+            <nav class="nav">
+                <a class="@Active("/")" asp-page="/Index"><span class="ico">▦</span> Overview</a>
+                <a class="@Active("/Findings")" asp-page="/Findings"><span class="ico">⚑</span> Findings</a>
+                @if (DashboardMode.Enabled)
+                {
+                    <a class="@Active("/LocalAudit")" asp-page="/LocalAudit"><span class="ico">▸</span> Start audit</a>
+                }
+                else
+                {
+                    @if (!OperatorMode.Enabled)
+                    {
+                <a class="@Active("/Agent")" asp-page="/Agent"><span class="ico">⬇</span> Download agent</a>
+                <div class="nav-label">Manage</div>
+                <a class="@Active("/Endpoints/Enroll")" asp-page="/Endpoints/Enroll"><span class="ico">＋</span> Enroll by name</a>
+                    }
+                <a class="@Active("/Import")" asp-page="/Import"><span class="ico">⇪</span> Import audit file</a>
+                }
+                <a class="@Active("/Rules")" asp-page="/Rules"><span class="ico">☰</span> Security rules</a>
+            </nav>
+            <div class="side-foot">
+                Signed in as <strong>@User.Identity!.Name</strong>
+                <form method="post" asp-page="/Account/Logout"><button type="submit">Sign out</button></form>
+            </div>
+        </aside>
+        <main class="main">
+            @if (TempData["Message"] is string message)
+            {
+                <div class="notice">@message</div>
+            }
+            @RenderBody()
+            <footer class="note">Results reflect the Windows settings observed at collection time.</footer>
+        </main>
+    </div>
+}
+</body>
+</html>

@@ -1,0 +1,38 @@
+@model AgentDownloadModel
+@* "Download agent" box: the zip contains the agent and a setup file for this computer. *@
+<div class="grid-2">
+    <div class="card">
+        <h2>Download the agent for @Model.EndpointName</h2>
+        @if (Model.Available)
+        {
+            <p class="muted">The ZIP includes the central address and this computer’s upload credential.</p>
+            <form method="post" asp-page="/Endpoints/Details" asp-page-handler="DownloadAgent" asp-route-id="@Model.EndpointId">
+                <button type="submit" class="btn primary">⬇ Download agent (.zip)</button>
+            </form>
+            <p class="muted small" style="margin:12px 0 0">Uploads will go to <code>@Model.ServerUrl</code>. Each download creates a new credential, so older downloads for this computer stop working.</p>
+            @if (Model.Loopback)
+            {
+                <div class="warn-box small" style="margin:12px 0 0">
+                    This address only works on the computer running the dashboard. To audit another PC, open the dashboard using this server's network name or IP address
+                    (or set <code>Agent:ServerUrl</code> in appsettings.json) before downloading.
+                </div>
+            }
+        }
+        else
+        {
+            <div class="warn-box small">The agent file has not been added to the server yet.</div>
+            <p class="small">Build it once, from the <code>EndpointLens</code> folder:</p>
+            <code class="token">Use Publish-Portable.ps1 and set Agent:ExePath to the Windows EXE.</code>
+            <p class="muted small">Then refresh this page.</p>
+        }
+    </div>
+    <div class="card">
+        <h2>On that computer</h2>
+        <ol class="steps">
+            <li><div>Right-click the zip and choose <strong>Extract All…</strong></div></li>
+            <li><div>Open <strong>EndpointLens.exe</strong>. If Windows shows “Windows protected your PC”, click <strong>More info → Run anyway</strong>.</div></li>
+            <li><div>Sign in to the local dashboard and click <strong>Start audit</strong>. EndpointLens uploads the result automatically.</div></li>
+        </ol>
+        <p class="muted small" style="margin-top:14px">Keep the ZIP and setup file private. They include the endpoint upload credential.</p>
+    </div>
+</div>

@@ -1,0 +1,11 @@
+@page "{id:int}"
+@model EndpointLens.Server.Pages.Endpoints.DeleteModel
+@{ ViewData["Title"] = "Delete endpoint"; }
+<div class="page-head"><div><h1>Delete endpoint</h1><p>@Model.Computer.Name</p></div></div>
+<section class="card audit-launch">
+    <p>This permanently removes the endpoint and its audit history from the central dashboard. The computer may register again the next time an Admin signs in there.</p>
+    <form method="post" asp-route-id="@Model.Computer.Id">
+        <button class="btn danger" type="submit">Delete endpoint and history</button>
+        <a class="btn" asp-page="/Index">Cancel</a>
+    </form>
+</section>

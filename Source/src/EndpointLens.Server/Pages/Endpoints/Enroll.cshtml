@@ -1,0 +1,32 @@
+@page
+@model EndpointLens.Server.Pages.Endpoints.EnrollModel
+@{ ViewData["Title"] = "Enroll endpoint"; }
+
+<div class="page-head">
+    <div>
+        <h1>Enroll endpoint</h1>
+        <p>Add a Windows computer you are allowed to audit. You then download an agent that is already connected to it.</p>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <form method="post">
+            <div asp-validation-summary="All" class="error small"></div>
+            <label asp-for="Name" style="margin-top:0">Computer name</label>
+            <input asp-for="Name" type="text" placeholder="e.g. FIN-LAPTOP-01" />
+            <div class="muted small" style="margin-top:4px">Tip: use the Windows computer name so audits are easy to match.</div>
+            <label asp-for="Notes">Notes <span class="muted">(optional)</span></label>
+            <textarea asp-for="Notes" rows="3" placeholder="Location, department, consent reference…"></textarea>
+            <p style="margin:18px 0 0"><button type="submit" class="btn primary">Enroll computer</button></p>
+        </form>
+    </div>
+    <div class="card">
+        <h2>How it works</h2>
+        <ol class="steps">
+            <li><div><strong>Enroll</strong> the computer here.</div></li>
+            <li><div><strong>Download the agent</strong> for it — it comes already connected to this dashboard.</div></li>
+            <li><div>On that computer, open the agent and click <strong>Start audit</strong>. It reads settings (read-only) and uploads the result over HTTPS.</div></li>
+        </ol>
+    </div>
+</div>

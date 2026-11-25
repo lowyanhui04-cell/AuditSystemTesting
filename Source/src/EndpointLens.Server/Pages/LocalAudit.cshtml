@@ -1,0 +1,21 @@
+@page
+@model LocalAuditModel
+@{ ViewData["Title"] = "Start audit"; }
+<div class="page-head">
+    <div><h1>Audit this computer</h1><p>@Model.ComputerName</p></div>
+    <a class="btn" asp-page="/Index">Back to overview</a>
+</div>
+<section class="card audit-launch">
+    <h2>Windows inventory and security</h2>
+    <p>Collect hardware, installed applications, the signed-in user, local accounts, antivirus, firewall and security settings.</p>
+    @if (!Model.IsElevated)
+    {
+        <p class="notice">Running with standard permissions. You can run EndpointLens.exe as administrator for checks that require elevation.</p>
+    }
+    @if (Model.Error is not null) { <p class="notice" role="alert">@Model.Error</p> }
+    <form method="post" data-audit-form>
+        <button class="btn primary" type="submit">Start audit</button>
+        <p hidden role="status" data-audit-status>Collecting evidence. Keep EndpointLens open until the results appear.</p>
+    </form>
+</section>
+<script src="/scripts/audit.js" defer></script>

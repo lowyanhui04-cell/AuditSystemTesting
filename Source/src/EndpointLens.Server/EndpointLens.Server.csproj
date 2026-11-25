@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <ItemGroup>
+    <ProjectReference Include="..\EndpointLens.Core\EndpointLens.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Management" Version="10.0.0" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" Version="10.0.15" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <AssemblyName>EndpointLens</AssemblyName>
+    <Version>2.2.0</Version>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <EmbeddedResource Include="wwwroot/css/site.css" LogicalName="EndpointLens.site.css" />
+    <EmbeddedResource Include="wwwroot/scripts/audit.js" LogicalName="EndpointLens.audit.js" />
+    <Content Update="wwwroot/scripts/audit.js" CopyToPublishDirectory="Never" />
+    <Content Update="wwwroot/css/site.css" CopyToPublishDirectory="Never" />
+  </ItemGroup>
+
+</Project>

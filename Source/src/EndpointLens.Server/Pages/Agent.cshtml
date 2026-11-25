@@ -1,0 +1,49 @@
+@page
+@model EndpointLens.Server.Pages.AgentModel
+@{ ViewData["Title"] = "Download agent"; }
+
+<div class="page-head">
+    <div>
+        <h1>Download agent</h1>
+        <p>Get the audit program for a Windows computer. The ZIP includes an upload credential scoped to the enrolled computer.</p>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h2>1. Download</h2>
+        @if (Model.Available)
+        {
+            <form method="post">
+                <button type="submit" class="btn primary big">⬇ Download agent</button>
+            </form>
+            <p class="muted small" style="margin:12px 0 0">
+                Each download adds a new computer to the Overview. It is named automatically after its first audit
+                (for example <strong>DESKTOP-ABC123</strong>). Results upload to <code>@Model.ServerUrl</code>.
+            </p>
+            @if (Model.Loopback)
+            {
+                <div class="warn-box small" style="margin:12px 0 0">
+                    This download works on <strong>this computer only</strong>. To audit another PC, open the dashboard with this
+                    server's IP address (for example <code>https://192.168.1.10:5443</code>) and download again.
+                </div>
+            }
+        }
+        else
+        {
+            <div class="warn-box small">The agent file has not been added to the server yet.</div>
+            <p class="small">Build it once, from the <code>EndpointLens</code> folder:</p>
+            <code class="token">Use Publish-Portable.ps1 and set Agent:ExePath to the Windows EXE.</code>
+            <p class="muted small">Then refresh this page.</p>
+        }
+    </div>
+    <div class="card">
+        <h2>2. Run it on the computer</h2>
+        <ol class="steps">
+            <li><div>Right-click <strong>EndpointLens-Agent.zip</strong> and choose <strong>Extract All…</strong></div></li>
+            <li><div>Open <strong>EndpointLens.exe</strong>. If Windows shows “Windows protected your PC”, click <strong>More info → Run anyway</strong>.</div></li>
+            <li><div>Create or sign in to the local account, then select <strong>Start audit</strong>. EndpointLens uploads the result automatically.</div></li>
+        </ol>
+        <p class="muted small" style="margin-top:14px">To audit the same computer again later, just open the same agent and click Start audit — no new download needed.</p>
+    </div>
+</div>
